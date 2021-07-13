@@ -1,9 +1,9 @@
 import os
-from flask import Flask, request, abort, jsonify
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
-
+import sys
 from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
@@ -32,7 +32,18 @@ def create_app(test_config=None):
   Create an endpoint to handle GET requests 
   for all available categories.
   '''
-  
+  @app.route('/categories', methods=['GET'])
+  def getCategories():
+    try:
+      categories = Category.query.all()
+      formatted_categories = [category.format() for category in categories.items]
+    except:
+      print(sys.exc_info())
+      abort(422)
+    return jsonify({
+      'success': True,
+      'categories': formatted_categories
+    })
 
   '''
   @TODO: 
@@ -40,13 +51,30 @@ def create_app(test_config=None):
   including pagination (every 10 questions). 
   This endpoint should return a list of questions, 
   number of total questions, current category, categories. 
-
+  
   TEST: At this point, when you start the application
   you should see questions and categories generated,
   ten questions per page and pagination at the bottom of the screen for three pages.
   Clicking on the page numbers should update the questions. 
   '''
-
+  @app.route('/questions', methods=['GET'])
+  def getQuestions():
+    try:
+      page = request.args.get('page', 1, type=int)
+      questions = Question.query.paginate(page, per_page=QUESTIONS_PER_PAGE)
+      formatted_questions = [question.format() for question in questions.items]
+      categories = Category.query.all()
+      
+    except:
+      print(sys.exc_info())
+      abort(422)
+    return jsonify({
+      'success': True,
+      'questions': formatted_questions,
+      'totalQuestions': len(Question.query.all()),
+      'categories': categories,
+      'current_category': questions.category
+    })
   '''
   @TODO: 
   Create an endpoint to DELETE question using a question ID. 
@@ -54,6 +82,7 @@ def create_app(test_config=None):
   TEST: When you click the trash icon next to a question, the question will be removed.
   This removal will persist in the database and when you refresh the page. 
   '''
+  
 
   '''
   @TODO: 
