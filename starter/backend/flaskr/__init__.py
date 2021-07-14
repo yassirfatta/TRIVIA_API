@@ -66,16 +66,20 @@ def create_app(test_config=None):
       formatted_questions = [question.format() for question in questions.items]
       categories = Category.query.all()
       
-    except:
-      print(sys.exc_info())
-      abort(422)
-    return jsonify({
+      if len(questions) == 0:
+        abort(404)
+
+      return jsonify({
       'success': True,
       'questions': formatted_questions,
       'totalQuestions': len(Question.query.all()),
       'categories': categories,
       'current_category': questions.category
     })
+    except:
+      print(sys.exc_info())
+      abort(422)
+    
   '''
   @TODO: 
   Create an endpoint to DELETE question using a question ID. 
@@ -94,11 +98,11 @@ def create_app(test_config=None):
 
     except:
       print(sys.exc_info())
-      abort(500)
+      abort(422)
 
     return jsonify({
       'success': True,
-      'question': question_id
+      'deleted': question_id
     })
 
   '''
@@ -124,9 +128,10 @@ def create_app(test_config=None):
       question.insert()
     except:
       print(sys.exc_info())
-      abort(500)
+      abort(405)
     return jsonify({
       'success': True,
+      'created': question.id,
       'question': question.format()
     })
 
@@ -156,7 +161,7 @@ def create_app(test_config=None):
       return jsonify({
         'success': True,
         'questions': formatted_questions,
-        'totalQuestions': len(Question.query.all())
+        'totalQuestions': len(questions.all())
       })
     except:
       print(sys.exc_info())
@@ -178,10 +183,11 @@ def create_app(test_config=None):
       formatted_questions = [question.format() for question in questions.items]
     except:
       print(sys.exc_info())
-      abort(422)
+      abort(404)
     return jsonify({
       'success': True,
       'questions': formatted_questions,
+      'current_category': category_id,
       'totalQuestions': questions.total
     })
 
@@ -227,6 +233,30 @@ def create_app(test_config=None):
       "error": 422,
       "message": "unprocessable"
       }), 422
+
+  @app.errorhandler(404)
+  def notFound(error):
+    return jsonify({
+      "success": False, 
+      "error": 404,
+      "message": "Not Found"
+      }), 404
+
+  @app.errorhandler(405)
+  def notFound(error):
+    return jsonify({
+      "success": False, 
+      "error": 405,
+      "message": "Method Not Allowed"
+      }), 405
+
+  @app.errorhandler(500)
+  def noResponse(error):
+    return jsonify({
+      "success": False, 
+      "error": 500,
+      "message": "No Response"
+      }), 500
 
   return app
 
