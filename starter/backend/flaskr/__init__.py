@@ -32,6 +32,7 @@ def create_app(test_config=None):
   Create an endpoint to handle GET requests 
   for all available categories.
   '''
+  
   @app.route('/categories', methods=['GET'])
   def getCategories():
     try:
@@ -82,7 +83,23 @@ def create_app(test_config=None):
   TEST: When you click the trash icon next to a question, the question will be removed.
   This removal will persist in the database and when you refresh the page. 
   '''
-  
+  @app.route('/questions/<int:question_id>', methods=['DELETE'])
+  def deleteQuestion(question_id):
+    question = Question.query.get(question_id)
+    if question is None:
+      abort(404)
+
+    try:
+      question.delete()
+
+    except:
+      print(sys.exc_info())
+      abort(500)
+
+    return jsonify({
+      'success': True,
+      'question': question_id
+    })
 
   '''
   @TODO: 
@@ -94,6 +111,24 @@ def create_app(test_config=None):
   the form will clear and the question will appear at the end of the last page
   of the questions list in the "List" tab.  
   '''
+  @app.route('/qustions', methods=['POST'])
+  def createQuestion():
+    data = request.get_json()
+    try:
+      question = Question(
+        question=data['question'],
+        answer=data['answer'],
+        category=data['category'],
+        difficulty=data['difficulty']
+      )
+      question.insert()
+    except:
+      print(sys.exc_info())
+      abort(500)
+    return jsonify({
+      'success': True,
+      'question': question.format()
+    })
 
   '''
   @TODO: 
@@ -105,6 +140,27 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
+  @app.route('/questions', methods=['POST'])
+  def searchQuestion():
+    body = request.get_json()
+    search = body.get('search', None)
+    page = request.args.get('page', 1, type=int)
+    try:
+      if search is None:
+        questions = Question.query.order_by(Question.id).paginate(page, per_page= QUESTIONS_PER_PAGE)
+        
+      else:
+        questions = Question.query.order_by(Question.id).filter(Question.question.ilike('%{}%'.format(search))).paginate(page, per_page= QUESTIONS_PER_PAGE)
+      
+      formatted_questions = [question.format() for question in questions.items]
+      return jsonify({
+        'success': True,
+        'questions': formatted_questions,
+        'totalQuestions': len(Question.query.all())
+      })
+    except:
+      print(sys.exc_info())
+      abort(422)
 
   '''
   @TODO: 
@@ -114,7 +170,20 @@ def create_app(test_config=None):
   categories in the left column will cause only questions of that 
   category to be shown. 
   '''
-
+  @app.route('/categoris/<int:category_id>/questions', methods=['GET'])
+  def getByCategory(category_id):
+    try:
+      page = request.args.get('page', 1, type=int)
+      questions = Question.query.filter(Question.category == category_id).paginate(page, per_page=QUESTIONS_PER_PAGE)
+      formatted_questions = [question.format() for question in questions.items]
+    except:
+      print(sys.exc_info())
+      abort(422)
+    return jsonify({
+      'success': True,
+      'questions': formatted_questions,
+      'totalQuestions': questions.total
+    })
 
   '''
   @TODO: 
@@ -127,13 +196,38 @@ def create_app(test_config=None):
   one question at a time is displayed, the user is allowed to answer
   and shown whether they were correct or not. 
   '''
+  @app.route('/quizes', methods=['POST'])
+  def getQuiz(quiz_category, previuos_questions):
+    questions = Question.query.filter(Question.category == quiz_category)
+    try:
+      for question in questions:
+        if question not in previuos_questions:
+          return jsonify({
+            'success': True,
+            'current_question': question
+          }), previuos_questions.insert(question)
+        else:
+          return jsonify({
+            'success': True,
+            'previous_question': question
+          })
+    except:
+      print(sys.exc_info())
+      abort(422)
 
   '''
   @TODO: 
   Create error handlers for all expected errors 
   including 404 and 422. 
   '''
-  
+  @app.errorhandler(422)
+  def unprocessable(error):
+    return jsonify({
+      "success": False, 
+      "error": 422,
+      "message": "unprocessable"
+      }), 422
+
   return app
 
     
